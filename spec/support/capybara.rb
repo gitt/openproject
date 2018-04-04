@@ -7,23 +7,6 @@ require 'action_dispatch'
 RSpec.configure do |config|
   Capybara.default_max_wait_time = 4
   Capybara.javascript_driver = :chrome_headless
-
-  resized = false
-  config.before(:each, js: true) do
-    next if resized
-    begin
-      window = Capybara.current_session.current_window
-      unless window.size == [1920, 1080]
-        warn "Resizing Capybara current window to 1920x1080 (Size was #{window.size.inspect})"
-        window.resize_to(1920, 1080)
-      end
-
-      resized = true
-    rescue => e
-      warn "Failed to update page width: #{e}"
-      warn e.backtrace
-    end
-  end
 end
 
 ##
@@ -103,11 +86,17 @@ Capybara.register_driver :firefox_headless do |app|
   )
 end
 
-
 Capybara.register_driver :chrome_headless do |app|
+  # Force the latest version of chromedriver using the chromedriver-helper gem
+  Chromedriver.set_version "2.37"
+
   options = Selenium::WebDriver::Chrome::Options.new
 
-  options.add_argument('--headless')
+  unless ActiveRecord::Type::Boolean.new.cast(ENV['OPENPROJECT_TESTING_NO_HEADLESS'])
+    options.add_argument('--headless')
+    options.add_argument('--disable-gpu')
+  end
+
   options.add_argument('--no-sandbox')
   options.add_argument('--disable-gpu')
   options.add_argument('--disable-popup-blocking')
@@ -120,18 +109,13 @@ Capybara.register_driver :chrome_headless do |app|
 
   options.add_preference(:browser, set_download_behavior: { behavior: 'allow' })
 
-  driver = Capybara::Selenium::Driver.new(app, browser: :chrome, options: options)
+  client = Selenium::WebDriver::Remote::Http::Default.new
+  client.timeout = 180
 
-  bridge = driver.browser.send(:bridge)
-
-  path = '/session/:session_id/chromium/send_command'
-  path[':session_id'] = bridge.session_id
-
-  bridge.http.call(:post, path, cmd: 'Page.setDownloadBehavior',
-                   params: {
-                     behavior: 'allow',
-                     downloadPath: DownloadedFile::PATH.to_s
-                   })
-
-  driver
+  Capybara::Selenium::Driver.new(
+    app,
+    browser: :chrome,
+    http_client: client,
+    options: options
+  )
 end

@@ -101,8 +101,8 @@ export class TimelineCellRenderer {
                           labels:WorkPackageCellLabels,
                           dates:any):void {
 
-    this.assignDate(changeset, 'startDate', dates.startDate!);
-    this.assignDate(changeset, 'dueDate', dates.dueDate!);
+    this.assignDate(changeset, 'startDate', dates.startDate);
+    this.assignDate(changeset, 'dueDate', dates.dueDate);
 
     this.updateLabels(true, labels, changeset);
   }
@@ -141,9 +141,9 @@ export class TimelineCellRenderer {
 
     // avoid negative "overdrag" if only start or due are changed
     if (direction !== 'both') {
-      if (dates.startDate != undefined && dates.startDate.isAfter(dueDate)) {
+      if (dates.startDate !== undefined && dates.startDate.isAfter(dueDate)) {
         dates.startDate = dueDate;
-      } else if (dates.dueDate != undefined && dates.dueDate.isBefore(startDate)) {
+      } else if (dates.dueDate !== undefined && dates.dueDate.isBefore(startDate)) {
         dates.dueDate = startDate;
       }
     }
@@ -168,14 +168,14 @@ export class TimelineCellRenderer {
     let direction:'left' | 'right' | 'both' | 'dragright';
 
     // Update the cursor and maybe set start/due values
-    if (jQuery(ev.target).hasClass(classNameLeftHandle)) {
+    if (jQuery(ev.target!).hasClass(classNameLeftHandle)) {
       // only left
       direction = 'left';
       this.workPackageTimeline.forceCursor('col-resize');
       if (changeset.value('startDate') === null) {
         changeset.setValue('startDate', changeset.value('dueDate'));
       }
-    } else if (jQuery(ev.target).hasClass(classNameRightHandle) || dateForCreate) {
+    } else if (jQuery(ev.target!).hasClass(classNameRightHandle) || dateForCreate) {
       // only right
       direction = 'right';
       this.workPackageTimeline.forceCursor('col-resize');

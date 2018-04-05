@@ -18,7 +18,7 @@ Capybara::Screenshot.prune_strategy = :keep_last_run
 # Don't silence puma if we're using it
 Capybara.register_server :thin do |app, port, host|
   require 'rack/handler/thin'
-  Rack::Handler::Thin.run(app, Port: port, Host: host)
+  Rack::Handler::Thin.run(app, Port: port, Host: host, signals: false)
 end
 Capybara.server = :thin
 
@@ -112,12 +112,23 @@ Capybara.register_driver :chrome_headless do |app|
   client = Selenium::WebDriver::Remote::Http::Default.new
   client.timeout = 180
 
-  Capybara::Selenium::Driver.new(
+  driver = Capybara::Selenium::Driver.new(
     app,
     browser: :chrome,
     http_client: client,
     options: options
   )
+
+  # Enable file downloads in headless mode
+  # https://bugs.chromium.org/p/chromium/issues/detail?id=696481
+  bridge = driver.browser.send :bridge
+
+  bridge.http.call :post,
+                   "/session/#{bridge.session_id}/chromium/send_command",
+                   cmd: 'Page.setDownloadBehavior',
+                   params: { behavior: 'allow', downloadPath: DownloadedFile::PATH.to_s }
+
+  driver
 end
 
 Capybara::Screenshot.register_driver(:chrome_headless) do |driver, path|
